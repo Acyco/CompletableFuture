@@ -326,3 +326,56 @@ CompletableFuture<String> newsFuture = CompletableFuture.supplyAsync(() -> {
 作为开发者，只需要有一个意识：
 
 开发者只需要把耗时的操作交给CompletableFuture开一个异步任务，然后继续关注主线程业务，当异步任务运行完成时会通知主线程它的运行结果。我们把具备了这种编程思想的开发称为**异步编程思想**。
+
+### 3、异步任务回调
+
+`CompletalbeFuture.get()`方法是阻塞的。调用时它会阻塞等待，直到这个Future完成，并在完成后返回结果。但是，很多时候这不是我们想要的。
+
+对于构建异步系统，我们应该能够将**回调**附加到CompletableFuture上，当这个Future完成时，该回调自动被调用，这样，我们就不必等待结果了，然后在Future的回调函数内编写完成Future之后需要执行的逻辑。您可以使用`thenApply()`,`thenAccept()`和`thenRun()`方法，它们可以把回调函数附加到CompletableFuture
+
+#### 3.1 thenApply
+
+使用`thenApply()`方法可以处理和转换CompletableFuture的结果，它以Function<T, U>作为参数。 Function<T, U>是一个函数式接口，表示一个转换操作，它接受类型T的参数并产生类型R的结果
+
+```
+CompletableFuture<U> thenApply(Function<? super T,? extends U> fn)
+```
+需求：异步读取filter_words.txt文件中的内容，读取完成后，把内容转换成数组（敏感词数组），异步任务返回敏感词数组
+
+```java
+public class ThenApplyDemo {
+    public static void main(String[] args) throws ExecutionException, InterruptedException {
+        // 需求：异步读取filter_words.txt文件中的内容，读取完成后，把内容转换成数组（敏感词数组），异步任务返回敏感词数组
+        CommonUtils.printTheadLog("main start");
+
+        CompletableFuture<String> readFileFuture = CompletableFuture.supplyAsync(() -> {
+            CommonUtils.printTheadLog("读取filter_words文件");
+            String filterWordContent = CommonUtils.readFile("filter_words.txt");
+            return filterWordContent;
+
+        });
+        CompletableFuture<String[]> filterWordsFuture = readFileFuture.thenApply(content -> {
+            CommonUtils.printTheadLog("把雇佣兵内容转换成敏感词数组");
+            String[] filterWords = content.split(",");
+            return filterWords;
+        });
+
+        CommonUtils.printTheadLog("main continue");
+        String[] filterWords = filterWordsFuture.get();
+        System.out.println("Arrays.toString(filterWords) = " + Arrays.toString(filterWords));
+        CommonUtils.printTheadLog("main end");
+    }
+}
+
+```
+你还可以通过附加一系列`thenApply()`回调方法，在CompletableFuture上编写一系列转换序列。一个`thenApply()`方法的结果可以传递给序列中的下一个，如果你对链式操作很了解，你会发现结果可以在链式操作上传递。
+
+```java
+CompletableFuture<String[]> filterWordsFuture = CompletableFuture.supplyAsync(() -> {
+    String filterWordContent = CommonUtils.readFile("filter_words.txt");
+    return filterWordContent;
+}).thenApply(content -> {
+    String[] filterWords = content.split(",");
+    return filterWords;
+});
+```
