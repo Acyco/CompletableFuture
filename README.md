@@ -142,3 +142,37 @@ CompletableFuture相对于Future具有以下优势：
 * 提供了适用于各种开发场景的回调函数。它还提供了非常全面的异常处理支持。
 * 无疑衔接和亲和lambda表达式和Stream - API。
 * 我见过的真正意义上的异步编程，把异步编程和函数式编程、响应式编程多种高阶编程思维集于一身，设计上更优雅。
+
+### 2、创建异步任务
+
+#### 2.1 runAsync
+
+如果你要异步运行某些耗时的后台任务，并且不想从任务中返回任何内容，则可以使用`CompletableFuture.runAsync()`方法。它接受一个Runnable接口实现类对象，方法返回`CompletableFuture<Void>`对象
+
+```java
+static CompletableFuture<Void> runAsync(Runnable runnable)
+```
+演示案例：创建一个不从任务中返回任何内容的CompletableFuture异步任务对象
+```java
+
+public class RunAsyncDemo {
+  public static void main(String[] args) {
+    // runAsync 创建异步任务
+    CommonUtils.printTheadLog("main start");
+    // 使用Runnable匿名内部类
+    CompletableFuture.runAsync(new Runnable() {
+      @Override
+      public void run() {
+        CommonUtils.printTheadLog("读取文件开始");
+        // 使用睡眠来模拟一个长时间的工作任务（例如读取文件，网络请求等）
+        CommonUtils.sleepSecond(3);
+        CommonUtils.printTheadLog("读取文件结束");
+      }
+    });
+
+    CommonUtils.printTheadLog("here are not blacked,main continue");
+    CommonUtils.sleepSecond(4); // 此处休眠 为的是等待CompletableFuture背后的线程池执行完成。
+    CommonUtils.printTheadLog("main end");
+  }
+}
+```
