@@ -176,3 +176,57 @@ public class RunAsyncDemo {
   }
 }
 ```
+
+我们也可以以Lambda表达式的形式传递Runnable接口实现类对象
+
+```java
+public class RunAsyncDemo2 {
+    public static void main(String[] args) {
+        // runAsync 创建异步任务
+        CommonUtils.printTheadLog("main start");
+        // 使用Lambda表达式
+        CompletableFuture.runAsync(new Runnable() {
+            @Override
+            public void run() {
+                CommonUtils.printTheadLog("读取文件开始");
+                // 使用睡眠来模拟一个长时间的工作任务（例如读取文件，网络请求等）
+                CommonUtils.sleepSecond(3);
+                CommonUtils.printTheadLog("读取文件结束");
+            }
+        });
+
+        CommonUtils.printTheadLog("here are not blacked,main continue");
+        CommonUtils.sleepSecond(4); // 此处休眠 为的是等待CompletableFuture背后的线程池执行完成。
+        CommonUtils.printTheadLog("main end");
+    }
+}
+
+```
+
+需求：使用CompletableFuture开启异步任务读取news.txt文件中的新闻稿，并打印输出。
+
+```java
+
+public class RunAsyncDemo3 {
+    public static void main(String[] args) {
+        // 需求：使用CompletableFuture开启异步任务读取news.txt文件中的新闻稿，并打印输出。
+        CommonUtils.printTheadLog("main start");
+
+        CompletableFuture.runAsync(() -> {
+            CommonUtils.printTheadLog("读取文件");
+            String content = CommonUtils.readFile("news.txt");
+            System.out.println(content);
+        });
+
+        CommonUtils.printTheadLog("here not blacked main continue");
+        CommonUtils.sleepSecond(4);
+        CommonUtils.printTheadLog("main end");
+    }
+}
+
+```
+
+ **疑问**： 异步任务是并发执行还是并行执行？ 
+ 
+* 如果是单核CPU，那么异步任务之间就是并发执行，如果是多核CPU（多CPU）异步任务就是并行执行
+* **重点**： 作为开发者，我们只需要清楚如何开启异步任务，CPU硬件会把异步任务合理的分配给CPU上的核运行。
