@@ -281,3 +281,39 @@ CompletableFuture<String> newsFuture = CompletableFuture.supplyAsync(() -> {
     return news;
 });
 ```
+#### 2.3 异步任务中的线程池
+
+大家已经知道，`runAsync()`和`supplyAsync()`方法都是开启单独的线程中执行异步任务。但是，我们从未创建线程对吗？不是吗？
+
+CompletableFuture会从全局`ForkJoinPool.commonPool()`线程池获取来执行这些任务
+
+当然， 你也可以创建一个线程池，并将其传递给`runAsync()`
+和`supplyAsync()`方法，以使它们在从您指定的线程池获得的线程中执行任务。
+
+CompletableFuture API中的所有方法都有两种变体，一种是接受传入的`Executor`参数作为指定的线程池，而另一个则使用默认的线程池（`ForkJoinPool.commonPool()`）
+
+```java
+// runAsync()重载
+static CompletableFuture<Void> runAsync(Runnable runnable)
+static CompletableFuture<Void> runAsync(Runnable runnable,
+        Executor executor)
+// spplyAsync()重载
+static <U> CompletableFuture<U> supplyAsync(Supplier<U> supplier)
+static <U> CompletableFuture<U> supplyAsync(Supplier<U> supplier,Executor executor)
+```
+需求：指定线程池，开启异步任务读取news.txt中的新闻稿，返回文件内容并在主线程打印输出
+
+```java
+ExecutorService executor = Executors.newFixedThreadPool(4);
+CompletableFuture<String> newsFuture = CompletableFuture.supplyAsync(() -> {
+    CommonUtils.printTheadLog("异步读取文件开始");
+    String news = CommonUtils.readFile("news.txt");
+    return news;
+},executor);
+```
+> 最佳实践：创建属于自己的业务线程池
+> 
+> 如果所有`completableFuture`共享一个线程池，那么一旦有异步任务执行一些很慢的I/O操作，就会导致线程池中所有的线程都阻塞在I/O操作上，从而造成线程饥饿，进而影响整个系统的性能。
+> 
+> 所以，强烈建议你要根据不同的业务类型创建不同的线程池，以避免互相干扰。
+
