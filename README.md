@@ -149,7 +149,7 @@ CompletableFuture相对于Future具有以下优势：
 
 如果你要异步运行某些耗时的后台任务，并且不想从任务中返回任何内容，则可以使用`CompletableFuture.runAsync()`方法。它接受一个Runnable接口实现类对象，方法返回`CompletableFuture<Void>`对象
 
-```java
+```
 static CompletableFuture<Void> runAsync(Runnable runnable)
 ```
 演示案例：创建一个不从任务中返回任何内容的CompletableFuture异步任务对象
@@ -230,3 +230,54 @@ public class RunAsyncDemo3 {
  
 * 如果是单核CPU，那么异步任务之间就是并发执行，如果是多核CPU（多CPU）异步任务就是并行执行
 * **重点**： 作为开发者，我们只需要清楚如何开启异步任务，CPU硬件会把异步任务合理的分配给CPU上的核运行。
+
+#### 2.2 supplyAsync
+`Completable?Future.runAsync()`开启不带返回结果异步任务。但是，如果你想从后台的异步任务中返回一个结果怎么办？此时，`CompletalbeFuture.supplyAsync()`是你的最好的选择了。
+
+```
+static <U> CompletableFuture<U> supplyAsync(Supplier<U> supplier)
+```
+它入参一个`Supplier<U>`供给者，用于供给带返回值的异步任务
+
+并返回`CompletableFuture<U>`,其中的U是供给者给值的类型。
+
+需求： 开启异步任务读取news.txt文件中的新闻稿，返回文件中内容并在主线程打印输出
+
+```java
+public class SupplyAsyncDemo {
+    public static void main(String[] args) throws ExecutionException, InterruptedException {
+        // 需求： 开启异步任务读取news.txt文件中的新闻稿，返回文件中内容并在主线程打印输出
+        CommonUtils.printTheadLog("main start");
+
+        CompletableFuture<String> newsFuture = CompletableFuture.supplyAsync(new Supplier<String>() {
+            @Override
+            public String get() {
+                String content = CommonUtils.readFile("news.txt");
+                return content;
+            }
+        });
+
+        CommonUtils.printTheadLog("here not blacked,main continue");
+        // 阻塞并等待newsFuture完成
+        String news = newsFuture.get();
+        System.out.println("news = " + news);
+        CommonUtils.printTheadLog("main end");
+    }
+}
+
+```
+
+如果想要获取newsFuture结果，可以调用completableFuture.get()方法，get()将阻塞，直到newsFuture完成。
+
+**疑问：** get方法阻塞的，会不会影响程序性能？
+
+后面会讲解回调函数
+
+我们依然可以使用Java 8的Lambda表达式使上面的代码更简洁。
+
+```java
+CompletableFuture<String> newsFuture = CompletableFuture.supplyAsync(() -> {
+    String news = CommonUtils.readFile("news.txt");
+    return news;
+});
+```
