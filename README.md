@@ -417,4 +417,36 @@ public class ThenAcceptDemo {
     }
 }
 ```
+#### 3.3 thenRun
 
+前面我们已经知道，通过`thenApply(Function<T,R>)`对链式操作中的上一个异步任务的结果进行转换，返回一个新的结果;
+通过`thenAccpet(Consumer<T>)`对链式操作中的上一个异步任务的结果进行消费，不返回新结果;
+
+如果我们只是想从CompletableFuture的链式操作得到一个完成的通知，甚至都不使用上一个链式操作的结果，那么`CompletableFuture.thenRun()`会是你最佳的选择，它需要一个Runnable并返回`CompletableFuture<Void>`
+
+```
+CompletableFuture<Void> thenRun(Runnable action);
+```
+
+演示案例： 我们仅仅想知道 filter_words.txt 的文件是否读取完成
+
+```java
+public class ThenRunDemo {
+    public static void main(String[] args) {
+        // 演示案例： 我们仅仅想知道敏感词汇的文件是否读取完成
+        CommonUtils.printTheadLog("main start");
+
+        CompletableFuture.supplyAsync(() -> {
+            CommonUtils.printTheadLog("读取filter_words文件");
+            String filterWordsContent = CommonUtils.readFile("filter_words.txt");
+            return filterWordsContent;
+        }).thenRun(() -> {
+            CommonUtils.printTheadLog("读取filter_words文件读取完成");
+        });
+
+        CommonUtils.printTheadLog("main continue");
+        CommonUtils.sleepSecond(4);
+        CommonUtils.printTheadLog("main end");
+    }
+}
+```
