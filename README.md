@@ -130,3 +130,15 @@ public class FutureDemo {
 * **无法解决任务相互依赖的问题。** filterWordFuture和newsFuture的结果不能自动发送给replaceFuture, 需要在replaceFuture中手动获取，所以使用Future不能轻而易举地创建异步工作流。
 * **不能将多个Future合并在一起。** 假设你有多种不同的Future, 你想在它们全部并行完成后然后运行某个函数，Future很难独立完成这一需要。
 * **没有异常处理。** Future提供的方法中没有专门的API应对异常处理，还需要开发者自己手动异常处理。
+
+#### 1.3 CompletableFuture 的优势
+
+![CompletableFuture](./images/CompletableFuture.png)
+
+**CompletableFuture**实现了**Future**和**CompletionStage**接口
+
+CompletableFuture相对于Future具有以下优势：
+* 为快速创建、链接依赖和结合多个Future提供了大量的便利方法。
+* 提供了适用于各种开发场景的回调函数。它还提供了非常全面的异常处理支持。
+* 无疑衔接和亲和lambda表达式和Stream - API。
+* 我见过的真正意义上的异步编程，把异步编程和函数式编程、响应式编程多种高阶编程思维集于一身，设计上更优雅。
