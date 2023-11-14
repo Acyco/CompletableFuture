@@ -379,3 +379,42 @@ CompletableFuture<String[]> filterWordsFuture = CompletableFuture.supplyAsync(()
     return filterWords;
 });
 ```
+#### 3.2 thenAccept
+
+如果不想从回调函数返回结果，而只想在Future完成后运行一些代码，则可以使用`thenAccpet()`
+
+这些方法是一个`Consumer<? super T>`，它可以对异步任务的执行结果进行消费使用，方法返回CompletableFuture<Void>
+
+```
+CompletableFuture<Void> thenAccept(Consumer<? super T> action)
+```
+
+通常用作回调链中的最后一个回调。
+
+需求：异步读取filter_words.txt文件中的内容，读取完成后，把内容转换成敏感词数组，然后打印敏感词数组
+
+```java
+public class ThenAcceptDemo {
+    public static void main(String[] args) {
+        // 需求：异步读取filter_words.txt文件中的内容，读取完成后，把内容转换成敏感词数组，然后打印敏感词数组
+        CommonUtils.printTheadLog("main start");
+
+        CompletableFuture.supplyAsync(()->{
+            CommonUtils.printTheadLog("读取filter_words.txt文件");
+            String filterWordsContent = CommonUtils.readFile("filter_words.txt");
+            return filterWordsContent;
+        }).thenApply(content ->{
+            CommonUtils.printTheadLog("把文件内容转换成敏感词数组");
+            String[] filterWords = content.split(",");
+            return filterWords;
+        }).thenAccept(filterWords->{
+            CommonUtils.printTheadLog("filterWorlds = " + Arrays.toString(filterWords));
+        });
+
+        CommonUtils.printTheadLog("main continue");
+        CommonUtils.sleepSecond(4);
+        CommonUtils.printTheadLog("main end");
+    }
+}
+```
+
