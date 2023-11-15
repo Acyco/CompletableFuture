@@ -681,3 +681,65 @@ public class ThenCombineDemo {
 ```java
 CompletableFuture<V> thenCombine(CompletionStage<? extends U> other,BiFunction<? super T,? super U,? extends V> fn)CompletableFuture<V> thenCombineAsync(CompletionStage<? extends U> other,BiFunction<? super T,? super U,? extends V> fn)CompletableFuture<V> thenCombineAsync(CompletionStage<? extends U> other,BiFunction<? super T,? super U,? extends V> fn, Executor executor)
 ```
+
+#### 4.3 合并多个异步 allOf / anyOf
+
+我们使用`thenCompose()`和`thenCombine()`将两个CompletableFuture组合和合并一起。
+
+如果要编排任意数量的CompletableFuture怎么办？可以使用以下方法来组合任意数量的CompletableFuture
+
+```java
+public static CompletableFuture<Void> allOf(CompletableFuture<?>... cfs)
+public static CompletableFuture<Object> anyOf(CompletableFuture<?>... cfs)
+```
+
+`CompletableFuture.allOf()`用于以下情形中： 有多个需要独立并运行的`Future`,并在所有这些`Future`都完成后执行一些操作。
+
+需求： 统计news1.txt,news2.txt,news3.txt文件中包含CompletableFuture关键字的文件的个数
+
+```java
+public class AllOfDemo {
+
+    public static CompletableFuture<String> readFileFuture(String fileName){
+        return CompletableFuture.supplyAsync(()->{
+            String content = CommonUtils.readFile(fileName);
+            return content;
+        });
+    }
+
+    public static void main(String[] args) {
+        // 需求： 统计news1.txt,news2.txt,news3.txt文件中包含CompletableFuture关键字的文件的个数
+
+        // step 1: 创建List集合存储文件名
+        List<String> fileList = Arrays.asList("news1.txt", "news2.txt", "news3.txt");
+
+        // step 2: 根据文件名调用readFileFuture创建多个CompletableFuture,并存入List集合中
+        List<CompletableFuture<String>> readFileFutureList = fileList.stream().map(fileName -> {
+            return readFileFuture(fileName);
+        }).collect(Collectors.toList());
+
+        // step 3: 把List集合转换成数组待用，以便传入allOf方法中
+        int len = readFileFutureList.size();
+        CompletableFuture[] readFileFutureArr = readFileFutureList.toArray(new CompletableFuture[len]);
+
+        // step 4: 使用allOf方法合并多个异步任务
+        CompletableFuture<Void> allOfFuture = CompletableFuture.allOf(readFileFutureArr);
+
+        // step 5: 当多个异步任务都完成后，使用回调操作文件结果，统计符合条件的文件个数
+        CompletableFuture<Long> countFuture = allOfFuture.thenApply(v -> {
+            return readFileFutureList.stream()
+                    .map(future -> future.join())
+                    .filter(content -> content.contains("CompletableFuture"))
+                    .count();
+        });
+
+        // step 6: 主线程打印输出文件个数
+        Long count = countFuture.join();
+        System.out.println("count = " + count);
+
+        /**
+         * allOf 特别适合合并多个异步任务，当所有异步任务都完成时可以进一步操作
+         */
+    }
+}
+```
