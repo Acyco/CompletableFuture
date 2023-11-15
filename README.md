@@ -743,3 +743,46 @@ public class AllOfDemo {
     }
 }
 ```
+
+顾名思义，当给定的多个异步任务中的有任意Future一个完成时，需要执行一些操作，可以使用anyOf方法
+
+```java
+public static CompletableFuture<Object> anyOf(CompletableFuture<?>... cfs)
+```
+
+`AnyOf()`返回一个新的CompletableFuture, 新的CompletableFuture的结果和cfs已完成的那个异步任务结果相同。
+
+演示案例： anyOf执行过程
+
+```java
+public class AnyOfDemo {
+    public static void main(String[] args) throws ExecutionException, InterruptedException {
+        //anyOf()
+        CompletableFuture<String> future1 =CompletableFuture.supplyAsync(()->{
+            CommonUtils.sleepSecond(2);
+            return "Future1的结果";
+        });
+
+        CompletableFuture<String> future2 =CompletableFuture.supplyAsync(()->{
+            CommonUtils.sleepSecond(1);
+            return "Future2的结果";
+        });
+
+        CompletableFuture<String> future3 =CompletableFuture.supplyAsync(()->{
+            CommonUtils.sleepSecond(3);
+            return "Future3的结果";
+        });
+
+        CompletableFuture<Object> anyOfFuture = CompletableFuture.anyOf(future1, future2, future3);
+
+        Object ret = anyOfFuture.get();
+        System.out.println("ret = " + ret);
+    }
+}
+```
+
+在上面的示例中，当一个CompletableFuture中的任意一个完成时，AnyOfFuture就完成了。由于future2的睡眠时间最少，因此它将首先完成，最终结果将是"Future2的结果"。
+
+注意：
+* `anyOf()` 方法返回类型必须是 `CompletableFutue <Object>`。
+* `anyOf()` 的问题在于，如果您拥有返回不同类型结果的CompletableFuture，那么您将不知道最终CompletableFuture的类型。
