@@ -843,4 +843,91 @@ public class ExceptionallyDemo {
 }
 
 ```
-因为 exceptionally 只处理一次异常，所以常常用在回调链的未端。
+因为 exceptionally 只处理一次异常，所以常常用在回调链的末端。
+
+#### 5.2 handle()
+
+CompletableFuture API 还提供了一种更通用的方法`handle()` 表示从异常中恢复
+
+handle() 常常被用来恢复回调链中的一次特定的异常，回调链恢复后可进一步向下传递。
+
+```java
+CompletableFuture<U> handle(BiFunction<? super T, Throwable, ? extends U> fn)
+```
+
+```java
+public class HandleDemo {
+    public static void main(String[] args) throws ExecutionException, InterruptedException {
+        // handle()
+        CommonUtils.printTheadLog("main start");
+        CompletableFuture<String> future = CompletableFuture.supplyAsync(() -> {
+            int r = 1 / 0;
+            return "result1";
+        }).handle((result,ex)->{
+            CommonUtils.printTheadLog("上一步异常的恢复");
+            if(ex != null){
+                CommonUtils.printTheadLog("出现异常：" + ex.getMessage());
+                return "UnKnown";
+            }
+            return result;
+        });
+
+        CommonUtils.printTheadLog("main continue");
+        String ret = future.get();
+        CommonUtils.printTheadLog("ret = " + ret);
+
+        CommonUtils.printTheadLog("main end");
+    }
+}
+```
+如果发生异常，则 result 参数为 null ，否则 ex 参数将为 null 。
+
+需求：对回调链中的一次异常进行恢复处理
+
+```java
+public class HandleDemo2 {
+    public static void main(String[] args) throws ExecutionException, InterruptedException {
+        // 需求： 对回调链中的一次异常进行恢复处理
+
+        CompletableFuture<String> future = CompletableFuture.supplyAsync(() -> {
+//            int r = 1 / 0;
+            return "result1";
+        }).handle((result, ex) -> {
+            if (ex != null) {
+                System.out.println("出现异常：" + ex.getMessage());
+                return "UnKnown1";
+            }
+            return result;
+        }).thenApply(result -> {
+
+            String str = null;
+            int len = str.length();
+
+            return result + " result2";
+        }).handle((result, ex) -> {
+            if (ex != null) {
+6                System.out.println("出现异常：" + ex.getMessage());
+                return "UnKnown2";
+            }
+            return result;
+        }).thenApply(result -> {
+            return result + " result3";
+        });
+
+        String ret = future.get();
+        CommonUtils.printTheadLog("ret = " + ret);
+    }
+}
+```
+
+和以往一样，为了提供并行化，异常处理可以方法单独的线程执行，以下是它们的异步回调版本
+
+```java
+CompletableFuture<T> exceptionally(Function<Throwable, ? extends T> fn)
+CompletableFuture<T> exceptionallyAsync(Function<Throwable, ? extends T> fn) // jdk17+
+CompletableFuture<T> exceptionallyAsync(Function<Throwable, ? extends T> fn, Executor executor) // jdk17+
+
+CompletableFuture<U> handle(BiFunction<? super T, Throwable, ? extends U> fn)
+CompletableFuture<U> handleAsync(BiFunction<? super T, Throwable, ? extends U> fn)
+CompletableFuture<U> handleAsync(BiFunction<? super T, Throwable, ? extends U> fn, Executor executor)
+```
