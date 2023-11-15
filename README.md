@@ -559,3 +559,62 @@ CompletableFuture<Void> thenRun(Runnable action)
 CompletableFuture<Void> thenRunAsync(Runnable action)
 CompletableFuture<Void> thenRunAsync(Runnable action,Executor executor)
 ```
+### 4、异步任务编排
+
+#### 4.1 编排2个依赖关系的异步任务 thenCompose()
+
+回顾需求：异步读取filter_words.txt文件中的内容，读取完成后，转换成敏感词数组让主线程待用。
+
+关于读取和解析内容，假设使用以下的readFileFuture(String) 和 splitFuture(String) 方法完成。
+
+```java
+public static CompletableFuture<String> readFileFuture(String fileName) {
+    return CompletableFuture.supplyAsync(()->{
+        String filterWordsContent = CommonUtils.readFile(fileName);
+        return filterWordsContent;
+    });
+}
+
+public static CompletableFuture<String[]> splitFuture(String content) {
+    return CompletableFuture.supplyAsync(()->{
+        String[] filterWords = content.split(",");
+        return filterWords;
+    });
+}
+```
+
+现在， 让我们先了解如果使用`thenApply()`结果会发生什么 
+
+```java
+CompletableFuture<CompletableFuture<String[]>> future = readFileFuture("filter_words.txt").thenApply(conent -> {
+    return splitFuture(conent);
+});
+``` 
+
+回顾在之前的案例中，`thenApply(Function<T,R>)`中Function回调会对上一步异步结果转换后得到一个简单值，但现在这种情况下，如果结果是嵌套的CompletableFuture，所以这是不符合预期的，那怎么办呢？
+
+我们想的是：把上一步异步任务的结果，转成一个CompletableFuture对象，这个Completable对象中包含本次异步任务处理后的结果。也就是说，**我们想结合上一步异步任务的结果得到下一个新的异步任务中，结果由这个新的异步任务返回**
+
+此时，你需要使用`thenCompose()`方法代替， 我们可以把它理解为**异步任务的组合**
+
+```java
+CompletableFuture<U> thenCompose(Function<? super T, ? extends CompletionStage<U>> fn)
+```
+
+所以，`thenCompose` 用来连接两个有依赖关系的异步任务，结果由第二个任务返回
+
+```java
+CompletableFuture<String[]> future = readFileFuture("filter_words.txt").thenCompose(content -> {
+    return splitFuture(content);
+});
+```
+因此，这里积累了一个经验：
+
+如果我们想连接（编排）两个依赖关系的异步任务（CompletableFuture对象），请使用thenCompose()方法
+
+当然，thenCompose也存在异步回调变体版本：
+
+```java
+CompletableFuture<U> thenCompose(Function<? super T, ? extends CompletionStage<U>> fn)
+CompletableFuture<U> thenComposeAsync(Function<? super T, ? extends CompletionStage<U>> fn)CompletableFuture<U> thenComposeAsync(Function<? super T, ? extends CompletionStage<U>> fn, Executor executor)
+```
