@@ -786,3 +786,61 @@ public class AnyOfDemo {
 注意：
 * `anyOf()` 方法返回类型必须是 `CompletableFutue <Object>`。
 * `anyOf()` 的问题在于，如果您拥有返回不同类型结果的CompletableFuture，那么您将不知道最终CompletableFuture的类型。
+
+### 5、异步任务的异常处理
+
+在前面的章节中，我们并没有更多地关心异常处理的问题，其实， CompletableFuture提供了优化处理异常的方式。
+
+首先，让我们了解**异常如何在回调链中传播**。
+
+```java
+ public static void main(String[] args) {
+
+        CompletableFuture<Void> future = CompletableFuture.supplyAsync(() -> {
+//            int r = 1 / 0;
+            return "result1";
+        }).thenApply(result -> {
+            return result + " result2";
+        }).thenApply(result -> {
+            return result + " result3";
+        }).thenAccept(result -> {
+            CommonUtils.printTheadLog(result);
+        });
+    }
+```
+
+如果在 supplyAsync 任务中出现异常，后续的 thenApply 和 thenAccept 回调都不会执行， CompletableFuture 将传入异常处理
+
+如果在第一个thenApply任务中出现异常，第二个 thenApply 和最后的 thenAccept 回调不会被执行，CompletableFuture 将转入异常处理，依次类推。
+
+#### 5.1 exceptionally()
+
+exceptionally 用于处理回调链上的异常， 回调链上出现的任何异常，回调链不继续向下执行，都在exceptionally中处理异常。
+
+```java
+CompletableFuture<T> exceptionally(Function<Throwable, ? extends T> fn) 
+```
+
+```java
+public class ExceptionallyDemo {
+    public static void main(String[] args) {
+        // exceptionally 处理回调链中的异常
+
+        CompletableFuture<String> future = CompletableFuture.supplyAsync(() -> {
+//            int r = 1 / 0;
+            return "result1";
+        }).thenApply(result -> {
+            String str = null;
+            int len = str.length();
+            return result + " result2";
+        }).thenApply(result -> {
+            return result + " result3";
+        }).exceptionally(ex -> {
+            System.out.println("出现异常：" + ex.getMessage());
+            return "UnKnown";
+        });
+    }
+}
+
+```
+因为 exceptionally 只处理一次异常，所以常常用在回调链的未端。
