@@ -618,3 +618,66 @@ CompletableFuture<String[]> future = readFileFuture("filter_words.txt").thenComp
 CompletableFuture<U> thenCompose(Function<? super T, ? extends CompletionStage<U>> fn)
 CompletableFuture<U> thenComposeAsync(Function<? super T, ? extends CompletionStage<U>> fn)CompletableFuture<U> thenComposeAsync(Function<? super T, ? extends CompletionStage<U>> fn, Executor executor)
 ```
+
+#### 4.2 编排2个非依赖关系的异步任务 thenCombine()
+
+我们已经知道，当其中一个Future依赖于另一个Future, 使用`thenCompose()`用于组合两个Future。如果两个Future之间没有依赖关系，你希望两个Future独立运行并在两者都完成之后执行回调操作时，则使用`thenCombine()`;
+
+```java
+CompletableFuture<V> thenCombine(CompletionStage<? extends U> other,BiFunction<? super T,? super U,? extends V> fn)
+```
+
+需求：替换新闻稿（ news.txt )中敏感词汇，把敏感词汇替换成*，敏感词存储在 filter_words.txt 中
+
+```java
+public class ThenCombineDemo {
+    public static void main(String[] args) throws ExecutionException, InterruptedException {
+        // 需求：替换新闻稿（ news.txt )中敏感词汇，把敏感词汇替换成*，敏感词存储在 filter_words.txt 中
+        CommonUtils.printTheadLog("main start");
+
+        // step 1: 读取filter_words.txt文件内容，并解析成敏感数组
+        CompletableFuture<String[]> future1 = CompletableFuture.supplyAsync(() -> {
+            CommonUtils.printTheadLog("读取filter_words文件");
+            String filterWordsContent = CommonUtils.readFile("filter_words.txt");
+            String[] filterWords = filterWordsContent.split(",");
+            return filterWords;
+        });
+
+        // step 2: 读取news.txt文件内容
+        CompletableFuture<String> future2 = CompletableFuture.supplyAsync(() -> {
+            CommonUtils.printTheadLog("读取news文件");
+            String newsContent = CommonUtils.readFile("news.txt");
+            return newsContent;
+        });
+
+        // step 2: 替换操作
+        CompletableFuture<String> combineFuture = future1.thenCombine(future2, (filterWords, newsContent) -> {
+            CommonUtils.printTheadLog("替换操作");
+            for (String word : filterWords) {
+                if (newsContent.indexOf(word) >= 0) {
+                    newsContent = newsContent.replace(word, "**");
+                }
+            }
+            return newsContent;
+        });
+
+        CommonUtils.printTheadLog("main continue");
+        String news = combineFuture.get();
+        CommonUtils.printTheadLog("news = " + news);
+        CommonUtils.printTheadLog("main end");
+
+        /**
+         * thenCombine 用于合并2个没有依赖关系的异步任务
+         */
+    }
+}
+
+```
+
+注意，当两个`Future`都完成时，才将两个异步任务的结果传递给`thenCombine`的回调函数进一步处理。
+
+和以往一样，thenCombine 也存在异步回调变体版本
+
+```java
+CompletableFuture<V> thenCombine(CompletionStage<? extends U> other,BiFunction<? super T,? super U,? extends V> fn)CompletableFuture<V> thenCombineAsync(CompletionStage<? extends U> other,BiFunction<? super T,? super U,? extends V> fn)CompletableFuture<V> thenCombineAsync(CompletionStage<? extends U> other,BiFunction<? super T,? super U,? extends V> fn, Executor executor)
+```
