@@ -1007,3 +1007,43 @@ CompletableFuture<U> applyToEither(CompletionStage<? extends T> other, Function<
 CompletableFuture<U> applyToEitherAsync(CompletionStage<? extends T> other, Function<? super T, U> fn)
 CompletableFuture<U> applyToEitherAsync(CompletionStage<? extends T> other, Function<? super T, U> fn,Executor executor)
 ```
+### 1.2 acceptEither
+
+`acceptEither()` 把两个异步任务做比较，异步任务先到结果的，就对先到的结果进行下一步操作(消费使用)。
+
+```java
+CompletableFuture<Void> acceptEither(CompletionStage<? extends T> other, Consumer<? super T> action)
+CompletableFuture<Void> acceptEitherAsync(CompletionStage<? extends T> other, Consumer<? super T> action)
+CompletableFuture<Void> acceptEitherAsync(CompletionStage<? extends T> other, Consumer<? super T> action,Executor executor)
+```
+演示案例：使用最先完成的异步任务的结果
+
+```java
+public class AcceptEitherDemo {
+    public static void main(String[] args) {
+        // 异步任务交互 acceptEither
+        // 异步任务1
+        CompletableFuture<Integer> future1 = CompletableFuture.supplyAsync(() -> {
+            int x = new Random().nextInt(3);
+            CommonUtils.sleepSecond(x);
+            CommonUtils.printTheadLog("任务1耗时" + x + "秒");
+            return x;
+        });
+
+        // 异步任务2
+        CompletableFuture<Integer> future2 = CompletableFuture.supplyAsync(() -> {
+            int y = new Random().nextInt(3);
+            CommonUtils.sleepSecond(y);
+            CommonUtils.printTheadLog("任务2耗时" + y + "秒");
+            return y;
+        });
+
+        // 哪个异步任务先完成，就使用异步任务的结果
+        future1.acceptEither(future2, result -> {
+            CommonUtils.printTheadLog("最先到达的结果：" + result);
+        });
+
+        CommonUtils.sleepSecond(4);
+    }
+}
+```
