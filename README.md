@@ -947,3 +947,63 @@ CompletableFuture<U> handleAsync(BiFunction<? super T, Throwable, ? extends U> f
 * 了解get方法和join方法区别
 * 掌握CompletableFuture 结合 Stream API 进阶应用
 * 掌握CompletableFuture 在实战中的应用
+
+## 1、异步任务的交互
+
+异步任务交互是指异步任务获取结果的**速度相比较**，按一定的规则（**先到先得**）进行下一步处理。
+
+### 1.1 applyToEither
+
+`applyToEither()` 把两个异步任务做比较，异步任务先到结果的，就对先到的结果进行下一步操作。
+
+```java
+CompletableFuture<U> applyToEither(CompletionStage<? extends T> other, Function<? super T, U> fn)
+```
+
+演示案例：使用最先完成的异步任务的结果
+
+```java
+public class ApplyToEitherDemo {
+    public static void main(String[] args) throws ExecutionException, InterruptedException {
+        // 异步任务交互
+
+        // 异步任务1
+        CompletableFuture<Integer> future1 = CompletableFuture.supplyAsync(() -> {
+            int x = new Random().nextInt(3);
+            CommonUtils.sleepSecond(x);
+            CommonUtils.printTheadLog("任务1耗时" + x + "秒");
+            return x;
+        });
+
+        // 异步任务2
+        CompletableFuture<Integer> future2 = CompletableFuture.supplyAsync(() -> {
+            int y = new Random().nextInt(3);
+            CommonUtils.sleepSecond(y);
+            CommonUtils.printTheadLog("任务2耗时" + y + "秒");
+            return y;
+        });
+
+        // 哪些异步任务的结果先到达，就使用哪个异步任务的结果
+        CompletableFuture<Integer> future = future1.applyToEither(future2, result -> {
+            CommonUtils.printTheadLog("最先到达的结果：" + result);
+            return result;
+        });
+        
+        CommonUtils.sleepSecond(4);
+
+        Integer ret = future.get();
+        CommonUtils.printTheadLog("ret = " + ret);
+    }
+}
+
+```
+
+速记心法： 任务1、任务2就像两辆公交，哪路公交先到，就乘坐(使用)哪路公交
+
+以下是applyToEither 和其对应的异步回调版本
+
+```java
+CompletableFuture<U> applyToEither(CompletionStage<? extends T> other, Function<? super T, U> fn)
+CompletableFuture<U> applyToEitherAsync(CompletionStage<? extends T> other, Function<? super T, U> fn)
+CompletableFuture<U> applyToEitherAsync(CompletionStage<? extends T> other, Function<? super T, U> fn,Executor executor)
+```
