@@ -931,3 +931,19 @@ CompletableFuture<U> handle(BiFunction<? super T, Throwable, ? extends U> fn)
 CompletableFuture<U> handleAsync(BiFunction<? super T, Throwable, ? extends U> fn)
 CompletableFuture<U> handleAsync(BiFunction<? super T, Throwable, ? extends U> fn, Executor executor)
 ```
+
+# CompletableFuture进阶
+
+## 学习内容
+
+* 异步任务的交互
+* get方法和join方法区别
+* CompletableFuture 在流式编程（ Stream API ）的优秀
+* CompletableFuture 实战应用之大数据商品比价
+
+## 学习目标
+
+* 掌握异步任务的交互操作
+* 了解get方法和join方法区别
+* 掌握CompletableFuture 结合 Stream API 进阶应用
+* 掌握CompletableFuture 在实战中的应用
