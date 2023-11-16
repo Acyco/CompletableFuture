@@ -1169,3 +1169,87 @@ public class ParallelStreamDemo {
 }
 ```
 它花费了2秒多（我的只有一秒）因为此次并行执行了10个线程（ 9个是 ForkJoinPool 线程池中的， 一个是main线程），需要注意的是运行结果由自己电脑CPU的核数决定
+
+### 3.2 CompletableFuture 在流式操作的优势
+
+让我们看看使用 CompletableFuture 是不执行的更有效率
+
+```java
+public class CompletableFutureDemo {
+    public static void main(String[] args) {
+        // CompletableFuture 在流式操作中的优势
+        // 需求： 创建10个 MyTask 耗时的任务， 统计它们执行完的总耗时
+        // 方案三：使用CompletableFuture
+      
+        // step 1: 创建10个MyTask对象，每个任务持续1s, 存入List集合
+        IntStream intStream = IntStream.range(0, 10);
+        List<MyTask> tasks = intStream.mapToObj(item -> {
+            return new MyTask(1);
+        }).collect(Collectors.toList());
+
+        // step 2: 根据MyTask对象构建10个异步任务
+        List<CompletableFuture<Integer>> futures = tasks.stream().map(myTask -> {
+            return CompletableFuture.supplyAsync(()-> {
+                return myTask.doWork();
+            });
+        }).collect(Collectors.toList());
+
+        // step 3: 执行异步任务，执行完成后，获取异步任务的结果，存入List集合中，统计总耗时
+        long start = System.currentTimeMillis();
+        List<Integer> results = futures
+                .stream()
+                .map(CompletableFuture::join)
+                .collect(Collectors.toList());
+        long end = System.currentTimeMillis();
+
+        double costTime = (end - start) / 1000.0;
+        System.out.printf("processed %d tasks %.2f second", tasks.size(), costTime);
+    }
+}
+```
+运行发现，两者使用时间大致一样，能否进一步优化呢？ （ps:我的是mac m1的cpu 在并行流只使用一秒，但在CompletableFuture却用了2秒）
+
+CompletableFuture 比 ParallelSteam 优点之一是你可以指定Excutor去处理任务。你能选择更合适数量的线程。我们可以选择大于 Runtime.getRuntime().availableProcessors() 数量的线程， 如下所示
+
+```java
+public class CompletableFutureDemo2 {
+    public static void main(String[] args) {
+        // CompletableFuture 在流式操作中的优势
+        // 需求： 创建10个 MyTask 耗时的任务， 统计它们执行完的总耗时
+        // 方案三：使用CompletableFuture
+
+        // step 1: 创建10个MyTask对象，每个任务持续1s, 存入List集合
+        IntStream intStream = IntStream.range(0, 10);
+        List<MyTask> tasks = intStream.mapToObj(item -> {
+            return new MyTask(1);
+        }).collect(Collectors.toList());
+
+        // 准备线程池
+        int N_CPU = Runtime.getRuntime().availableProcessors();
+        // 设置线程池中的线程的数量至少为10
+        ExecutorService executor = Executors.newFixedThreadPool(Math.min(tasks.size(),N_CPU * 2));
+
+        // step 2: 根据MyTask对象构建10个异步任务
+        List<CompletableFuture<Integer>> futures = tasks.stream().map(myTask -> {
+            return CompletableFuture.supplyAsync(()-> {
+                return myTask.doWork();
+            },executor);
+        }).collect(Collectors.toList());
+
+        // step 3: 执行异步任务，执行完成后，获取异步任务的结果，存入List集合中，统计总耗时
+        long start = System.currentTimeMillis();
+        List<Integer> results = futures
+                .stream()
+                .map(CompletableFuture::join)
+                .collect(Collectors.toList());
+        long end = System.currentTimeMillis();
+
+        double costTime = (end - start) / 1000.0;
+        System.out.printf("processed %d tasks %.2f second", tasks.size(), costTime);
+        
+        // 关闭线程池
+        executor.shutdown();
+    }
+}
+```
+测试代码时，电脑配置是4核8线程，而我们创建的线程池中线程数最少也是10个，所以，每个线程负责一个任务（耗时1s）总体来说， 处理10个任务总共需要1秒。
