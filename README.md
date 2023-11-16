@@ -1070,3 +1070,102 @@ get() 和 join() 都是CompletableFuture提供的以阻塞方式获取结果的�
 
 ```
 使用时，我们发现，get() 抛出检查时异常，需要程序必须处理；而join() 方法抛出运行时异常，程序可以不处理。所以， join()更适合用在流式编程中。
+
+## ParallelStream VS CompletableFuture
+
+CompletableFuture 虽然提高了任务并行处理能力，如果它和 Stream API 结合使用，能否进一步多个任务的并行处理能力呢？
+
+同时，对于 Stream API 本身就提供了并行流 ParallelStream，它们有什么不同呢？
+
+我们将通过一个耗时的任务来体现它们的不同， 更重要地是，我们能进一步加强 CompletableFuture 和 Stream API 的结合使用，同时搞清楚 CompletableFuture 在流式操作的优势。
+
+需求： 创建10个 MyTask 耗时的任务， 统计它们执行完的总耗时
+
+定义一个 MyTask 类，来模拟耗时的长任务
+
+```java
+public class MyTask {
+    private int duration;
+
+    public MyTask(int duration) {
+        this.duration = duration;
+    }
+
+    // 模拟耗时的长任务
+    public int doWork() {
+        CommonUtils.printTheadLog("doWork");
+        CommonUtils.sleepSecond(duration);
+        return duration;
+    }
+}
+```
+
+同时，我们创建10个任务，每个持续一秒
+
+```java
+IntStream intStream = IntStream.range(0, 10);
+List<MyTask> tasks = intStream.mapToObj(item -> {
+    return new MyTask(1);
+}).collect(Collectors.toList());
+```
+
+### 3.1 并行流的局限
+
+我们先使用串行执行， 让所有的任务都在主线程 main 中执行。
+
+```java
+public class SequenceDemo {
+    public static void main(String[] args) {
+        // 并行流的局限性
+        // 需求： 创建10个 MyTask 耗时的任务， 统计它们执行完的总耗时
+        // 方案一：在主线程中使用串行执行
+        // step 1: 创建10个MyTask对象，每个任务持续1s, 存入List集合
+        // {0,1,2,3,4,5,6,7,8,9}
+        IntStream intStream = IntStream.range(0, 10);
+        List<MyTask> tasks = intStream.mapToObj(item -> {
+            return new MyTask(1);
+        }).collect(Collectors.toList());
+
+        // step 2: 执行10个MyTask,统计总耗时
+        long start = System.currentTimeMillis();
+        List<Integer> results = tasks.stream().map(myTask -> {
+            return myTask.doWork();
+        }).collect(Collectors.toList());
+
+        long end = System.currentTimeMillis();
+
+        double costTime = (end - start) / 1000.0;
+        System.out.printf("processed %d tasks %.2f second", tasks.size(), costTime);
+    }
+}
+```
+它花费了10秒，因为每个任务在主线程一个接一个的执行。
+
+因为涉及 Stream API，而且存在耗时的长任务，所以，我们可以使用 `parallelStream()`
+
+```java
+public class ParallelStreamDemo {
+    public static void main(String[] args) {
+        // 并行流的局限性
+        // 需求： 创建10个 MyTask 耗时的任务， 统计它们执行完的总耗时
+        // 方案二：使用串行流
+        // step 1: 创建10个MyTask对象，每个任务持续1s, 存入List集合
+        IntStream intStream = IntStream.range(0, 10);
+        List<MyTask> tasks = intStream.mapToObj(item -> {
+            return new MyTask(1);
+        }).collect(Collectors.toList());
+
+        // step 2: 执行10个MyTask,统计总耗时
+        long start = System.currentTimeMillis();
+        List<Integer> results = tasks.parallelStream().map(myTask -> {
+            return myTask.doWork();
+        }).collect(Collectors.toList());
+
+        long end = System.currentTimeMillis();
+
+        double costTime = (end - start) / 1000.0;
+        System.out.printf("processed %d tasks %.2f second", tasks.size(), costTime);
+    }
+}
+```
+它花费了2秒多（我的只有一秒）因为此次并行执行了10个线程（ 9个是 ForkJoinPool 线程池中的， 一个是main线程），需要注意的是运行结果由自己电脑CPU的核数决定
