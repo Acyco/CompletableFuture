@@ -1059,3 +1059,14 @@ CompletableFuture<Void> runAfterEitherAsync(CompletionStage<?> other,Runnable ac
 > 提示
 > 
 > 异步任务交互的三个方法和之前学习的异步回调方法 thenApply、 thenAccept、thenRun 有异曲同工之妙。
+
+## get() 和 join() 区别
+
+get() 和 join() 都是CompletableFuture提供的以阻塞方式获取结果的方法。
+
+那么该如何选用呢？ 请看如下案例：
+
+```java
+
+```
+使用时，我们发现，get() 抛出检查时异常，需要程序必须处理；而join() 方法抛出运行时异常，程序可以不处理。所以， join()更适合用在流式编程中。
