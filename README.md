@@ -1047,3 +1047,15 @@ public class AcceptEitherDemo {
     }
 }
 ```
+### 1.3 runAfterEither
+
+如果不关心最先到达的结果，只想在有一个异步任务完成时得到完成的通知，可以使用 `runAfterEither()`, 以下是它的相关方法：
+
+```java
+CompletableFuture<Void> runAfterEither(CompletionStage<?> other,Runnable action)
+CompletableFuture<Void> runAfterEitherAsync(CompletionStage<?> other,Runnable action)
+CompletableFuture<Void> runAfterEitherAsync(CompletionStage<?> other,Runnable action,Executor executor)
+```
+> 提示
+> 
+> 异步任务交互的三个方法和之前学习的异步回调方法 thenApply、 thenAccept、thenRun 有异曲同工之妙。
