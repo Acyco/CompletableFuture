@@ -1290,3 +1290,97 @@ IO密集型任务的特点：大量网络请求，文件操作，CPU运算少，
 **需求描述：**实现一个大数据比价服务，价格数据可以从京东、天猫、拼多多等平台去获取指定商品的价格、优惠金额，然后计算出实际付款金额（商品价格 - 优惠金额），最终返回价格最优的平台与价格信息。
 
 ![比价](./images/image1.png)
+
+### 4.2 构建工具类和实体类
+
+定义价格实体类 PriceResult
+
+```java
+public class PriceResult {
+    private int price;
+    private int discount;
+    private int realPrice;
+    private String platform;
+
+    public PriceResult() {
+    }
+
+    public PriceResult(String platform) {
+        this.platform = platform;
+    }
+
+    public PriceResult(int price, int discount, int realPrice, String platform) {
+        this.price = price;
+        this.discount = discount;
+        this.realPrice = realPrice;
+        this.platform = platform;
+    }
+
+    public int getPrice() {
+        return price;
+    }
+
+    public void setPrice(int price) {
+        this.price = price;
+    }
+
+    public int getDiscount() {
+        return discount;
+    }
+
+    public void setDiscount(int discount) {
+        this.discount = discount;
+    }
+
+    public int getRealPrice() {
+        return realPrice;
+    }
+
+    public void setRealPrice(int realPrice) {
+        this.realPrice = realPrice;
+    }
+
+    public String getPlatform() {
+        return platform;
+    }
+
+    public void setPlatform(String platform) {
+        this.platform = platform;
+    }
+
+    @Override
+    public String toString() {
+        return "PriceResult{" +
+                "平台='" + platform + '\'' +
+                ", 平台价=" + price +
+                ", 优惠价=" + discount +
+                ", 最终价=" + realPrice +
+                '}';
+    }
+}
+```
+
+修改工具类CommonUtils, 添加getCurrenTime()方法获取当前时间并格式化，修改 printThreadLog()方法，把时间戳换成当前时间。
+
+```java
+public class CommonUtils {
+
+    private static String getCurrentTime() {
+        LocalTime now = LocalTime.now();
+        return now.format(DateTimeFormatter.ofPattern("[HH:mm::ss.SS"));
+    }
+
+    // 打印输出带线程信息的日志
+    public static void printTheadLog(String message) {
+        // 当前时间 | 线程id | 线程名 | 日志信息 
+        String result = new StringJoiner(" | ")
+                .add(getCurrentTime())
+                .add(String.format("%2d", Thread.currentThread().getId()))
+                .add(Thread.currentThread().getName())
+                .add(message)
+                .toString();
+        System.out.println(result);
+    }
+
+}
+```
