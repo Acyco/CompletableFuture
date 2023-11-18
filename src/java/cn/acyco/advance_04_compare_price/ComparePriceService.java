@@ -3,9 +3,11 @@ package cn.acyco.advance_04_compare_price;
 import cn.acyco.utils.CommonUtils;
 
 import java.util.Comparator;
+import java.util.List;
 import java.util.Objects;
 import java.util.Optional;
 import java.util.concurrent.*;
+import java.util.stream.Collectors;
 import java.util.stream.Stream;
 
 public class ComparePriceService {
@@ -117,5 +119,25 @@ public class ComparePriceService {
         priceResult.setDiscount(discount);
         CommonUtils.printTheadLog(priceResult.getPlatform() + "最终价格计算完成" + priceResult.getRealPrice());
         return priceResult;
+    }
+
+    public PriceResult batchComparePrice(List<String> products) {
+        // step 1:遍历每个商品的名字， 根据商品名称开启异步任务获取最终价， 归集到List集合中
+        List<CompletableFuture<PriceResult>> completableFutures = products.stream()
+                .map(productName -> {
+                    return CompletableFuture
+                            .supplyAsync(() -> HttpRequest.getTaobaoPrice(productName))
+                            .thenCombine(CompletableFuture.supplyAsync(() -> HttpRequest.getTaoBaoDiscount(productName)), (((priceResult, discount) -> {
+                                return this.computeRealPrice(priceResult, discount);
+                            })));
+
+                }).collect(Collectors.toList());
+        // step 2: 把多个商品的最终价进行排序获取最小值
+        return completableFutures
+                .stream()
+                .map(CompletableFuture::join)
+                .sorted(Comparator.comparing(PriceResult::getRealPrice))
+                .findFirst()
+                .get();
     }
 }

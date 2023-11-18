@@ -1548,7 +1548,7 @@ public class ComparePriceService {
 }
 ```
 
-### 使用CompletableFuture进一步增强并行
+### 4.6 使用CompletableFuture进一步增强并行
 
 ```java
 package cn.acyco.advance_04_compare_price;
@@ -1586,5 +1586,45 @@ public class ComparePriceService {
                 .min(Comparator.comparing(PriceResult::getRealPrice))
                 .get();
     }
+}
+```
+### 4.7 Stream API 操作批量商品比价
+
+```java
+public class ComparePriceService {
+  public PriceResult batchComparePrice(List<String> products) {
+    // step 1:遍历每个商品的名字， 根据商品名称开启异步任务获取最终价， 归集到List集合中
+    List<CompletableFuture<PriceResult>> completableFutures = products.stream()
+            .map(productName -> {
+              return CompletableFuture
+                      .supplyAsync(() -> HttpRequest.getTaobaoPrice(productName))
+                      .thenCombine(CompletableFuture.supplyAsync(() -> HttpRequest.getTaoBaoDiscount(productName)), (((priceResult, discount) -> {
+                        return this.computeRealPrice(priceResult, discount);
+                      })));
+
+            }).collect(Collectors.toList());
+    // step 2: 把多个商品的最终价进行排序获取最小值
+    return completableFutures
+            .stream()
+            .map(CompletableFuture::join)
+            .sorted(Comparator.comparing(PriceResult::getRealPrice))
+            .findFirst()
+            .get();
+  }
+}
+```
+
+批量商品比价查询测试类
+
+```java
+public class ComparePriceDemo {
+  public static void main(String[] args) {
+    ComparePriceService service = new ComparePriceService();
+
+    // 异步任务的批量操作
+    // 测试在一个平台比较同款产品（iPhone14)不同色系的价格
+    List<String> products = Arrays.asList("iPhone14黑色", "iPhone14白色", "iPhone14玫瑰红");
+    PriceResult priceResult = service.batchComparePrice(products);
+  }
 }
 ```
