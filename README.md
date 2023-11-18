@@ -1547,3 +1547,44 @@ public class ComparePriceService {
     }
 }
 ```
+
+### 使用CompletableFuture进一步增强并行
+
+```java
+package cn.acyco.advance_04_compare_price;
+
+import cn.acyco.utils.CommonUtils;
+
+import java.util.Comparator;
+import java.util.Objects;
+import java.util.Optional;
+import java.util.concurrent.*;
+import java.util.stream.Stream;
+
+public class ComparePriceService {
+  
+    // 使用CompletableFuture进一步增强并行
+    public PriceResult getCheapestPlatformPrice3(String productName) {
+        // 获取淘宝平台的商品价格和优惠
+        CompletableFuture<PriceResult> taoBaoCF = CompletableFuture
+                .supplyAsync(() -> HttpRequest.getTaobaoPrice(productName))
+                .thenCombine(CompletableFuture.supplyAsync(() -> HttpRequest.getTaoBaoDiscount(productName)), this::computeRealPrice);
+        
+        //  获取京东平台的商品价格和优惠
+        CompletableFuture<PriceResult> jDongCF = CompletableFuture
+                .supplyAsync(() -> HttpRequest.getJDongPrice(productName))
+                .thenCombine(CompletableFuture.supplyAsync(() -> HttpRequest.getJDongDiscount(productName)), this::computeRealPrice);
+
+        // 获取拼多多平台的商品价格和优惠
+        CompletableFuture<PriceResult> pddCF = CompletableFuture
+                .supplyAsync(() -> HttpRequest.getPDDPrice(productName))
+                .thenCombine(CompletableFuture.supplyAsync(() -> HttpRequest.getPDDDiscount(productName)), this::computeRealPrice);
+
+        // 计算最优的平台和价格
+        return Stream.of(taoBaoCF, jDongCF, pddCF)
+                .map(CompletableFuture::join)
+                .min(Comparator.comparing(PriceResult::getRealPrice))
+                .get();
+    }
+}
+```

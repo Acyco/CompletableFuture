@@ -14,8 +14,18 @@ public class ComparePriceDemo {
         */
 
         // 方案二测试：使用Future+线程池增加并行
+        /*
         long start = System.currentTimeMillis();
         PriceResult priceResult = service.getCheapestPlatformPrice2("iPhone14");
+        long end = System.currentTimeMillis();
+        double costTime = (end - start) / 1000.0;
+        System.out.printf("cost %.2f second\n", costTime);
+        System.out.println("priceResult = " + priceResult);
+        */
+        
+        // 方案三测试：使用CompletableFuture进一步增强并行
+        long start = System.currentTimeMillis();
+        PriceResult priceResult = service.getCheapestPlatformPrice3("iPhone14");
         long end = System.currentTimeMillis();
         double costTime = (end - start) / 1000.0;
         System.out.printf("cost %.2f second\n", costTime);
@@ -24,6 +34,7 @@ public class ComparePriceDemo {
         /**
          * 方案一：串行方式操作商品比价                consTime 6.19
          * 方案二：Future+线程池 提高了任务处理的并行性  costTime 2.19
+         * 方案三：使用CompletableFuture进一步增强并行 costTime 1.10
          */
     }
 }
