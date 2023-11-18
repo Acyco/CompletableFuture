@@ -295,8 +295,7 @@ CompletableFuture API中的所有方法都有两种变体，一种是接受传�
 ```java
 // runAsync()重载
 static CompletableFuture<Void> runAsync(Runnable runnable)
-static CompletableFuture<Void> runAsync(Runnable runnable,
-        Executor executor)
+static CompletableFuture<Void> runAsync(Runnable runnable,Executor executor)
 // spplyAsync()重载
 static <U> CompletableFuture<U> supplyAsync(Supplier<U> supplier)
 static <U> CompletableFuture<U> supplyAsync(Supplier<U> supplier,Executor executor)
@@ -1067,7 +1066,30 @@ get() 和 join() 都是CompletableFuture提供的以阻塞方式获取结果的�
 那么该如何选用呢？ 请看如下案例：
 
 ```java
+public class GetOrJoinDemo {
+    public static void main(String[] args) {
+        // get or join
+        CompletableFuture<String> future = CompletableFuture.supplyAsync(() -> {
+            return "hello";
+        });
+        String ret = null;
+        // 抛出检查时异常，必须处理
+        try {
+            String ret = future.get();
+        } catch (InterruptedException e) {
+            throw new RuntimeException(e);
+        } catch (ExecutionException e) {
+            throw new RuntimeException(e);
+        }
+        System.out.println(("ret = " + ret);
+        
+        // 抛出运行时异常，可以不处理
+        String ret = future.join();
+        System.out.println(("ret = " + ret);
 
+       
+    }
+}
 ```
 使用时，我们发现，get() 抛出检查时异常，需要程序必须处理；而join() 方法抛出运行时异常，程序可以不处理。所以， join()更适合用在流式编程中。
 
