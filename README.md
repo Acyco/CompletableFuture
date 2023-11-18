@@ -1497,3 +1497,53 @@ public class ComparePriceService {
     }
 }
 ```
+### 4.5 使用Future+线程池增加并行
+
+```java
+public class ComparePriceService {
+
+    // 使用Future+线程池增加并行
+    public PriceResult getCheapestPlatformPrice2(String productName) {
+        // 线程池
+        ExecutorService executor = Executors.newFixedThreadPool(4);
+
+
+        // 获取淘宝平台的商品价格和优惠
+        Future<PriceResult> taoBaoFuture = executor.submit(() -> {
+            PriceResult priceResult = HttpRequest.getTaobaoPrice(productName);
+            int discount = HttpRequest.getTaoBaoDiscount(productName);
+            return this.computeRealPrice(priceResult, discount);
+        });
+
+
+        //  获取京东平台的商品价格和优惠
+        Future<PriceResult> JDongFuture = executor.submit(() -> {
+            PriceResult priceResult = HttpRequest.getJDongPrice(productName);
+            int discount = HttpRequest.getJDongDiscount(productName);
+            return this.computeRealPrice(priceResult, discount);
+        });
+
+        // 获取拼多多平台的商品价格和优惠
+        Future<PriceResult> pddFuture = executor.submit(() -> {
+            PriceResult priceResult = HttpRequest.getPDDPrice(productName);
+            int discount = HttpRequest.getPDDDiscount(productName);
+            return this.computeRealPrice(priceResult, discount);
+        });
+        // 计算最优的平台和价格
+        return Stream.of(taoBaoFuture, JDongFuture, pddFuture)
+                .map(future -> {
+                    try {
+                        return future.get(5, TimeUnit.SECONDS);
+                    } catch (Exception e) {
+                        e.printStackTrace();
+                        return null;
+                    } finally {
+                        executor.shutdown();
+                    }
+                })
+                .filter(Objects::nonNull)
+                .min(Comparator.comparing(PriceResult::getRealPrice))
+                .get();
+    }
+}
+```
