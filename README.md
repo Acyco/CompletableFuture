@@ -1287,7 +1287,7 @@ IO密集型任务的特点：大量网络请求，文件操作，CPU运算少，
 
 ### 4.1 需求描述和分析
 
-**需求描述：**实现一个大数据比价服务，价格数据可以从京东、天猫、拼多多等平台去获取指定商品的价格、优惠金额，然后计算出实际付款金额（商品价格 - 优惠金额），最终返回价格最优的平台与价格信息。
+**需求描述：** 实现一个大数据比价服务，价格数据可以从京东、天猫、拼多多等平台去获取指定商品的价格、优惠金额，然后计算出实际付款金额（商品价格 - 优惠金额），最终返回价格最优的平台与价格信息。
 
 ![比价](./images/image1.png)
 
@@ -1449,5 +1449,51 @@ public class HttpRequest {
         return 5300;
     }
 
+}
+```
+### 4.4 使用串行方式操作商品比价
+
+```java
+public class ComparePriceService {
+    // 方案一：串行方式操作商品比价
+
+    public PriceResult getCheapestPlatformPrice(String productName) {
+        PriceResult priceResult;
+        int discount;
+        
+        // 获取淘宝平台的商品价格和优惠
+        priceResult = HttpRequest.getTaobaoPrice(productName);
+        discount = HttpRequest.getTaoBaoDiscount(productName);
+        PriceResult taoBaoPriceResult = this.computeRealPrice(priceResult, discount);
+
+        // 获取京东平台的商品价格和优惠
+        priceResult = HttpRequest.getJDongPrice(productName);
+        discount = HttpRequest.getJDongDiscount(productName);
+        PriceResult jDongPriceResult = this.computeRealPrice(priceResult, discount);
+        
+        // 获取拼多多平台的商品价格和优惠
+        priceResult = HttpRequest.getPDDPrice(productName);
+        discount = HttpRequest.getPDDDiscount(productName);
+        PriceResult pddPriceResult = this.computeRealPrice(priceResult, discount);
+
+        // 计算最优的平台和价格
+//        Stream<PriceResult> stream = Stream.of(taoBaoPriceResult, jDongPriceResult, pddPriceResult);
+//        Optional<PriceResult> minOpt = stream.min(Comparator.comparing(priceRes -> {
+//            return priceRes.getRealPrice();
+//        }));
+//        PriceResult result = minOpt.get();
+//        return result;
+        return Stream.of(taoBaoPriceResult, jDongPriceResult, pddPriceResult)
+                .min(Comparator.comparing(PriceResult::getRealPrice))
+                .get();
+    }
+
+    // 计算商品的最终价格 = 平台价格 - 优惠价
+    public PriceResult computeRealPrice(PriceResult priceResult, int discount) {
+        priceResult.setRealPrice(priceResult.getPrice() - discount);
+        priceResult.setDiscount(discount);
+        CommonUtils.printTheadLog(priceResult.getPlatform() + "最终价格计算完成" + priceResult.getRealPrice());
+        return priceResult;
+    }
 }
 ```
